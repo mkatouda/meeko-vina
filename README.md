@@ -4,15 +4,22 @@ python script easy to use Autodock Vina basic docking simualation
 
 ## Requirements
 
-1. python: 3.6 or later
-2. rdkit
-3. meeko
+* python (>=3.6)
+* numpy
+* scipy
+* rdkit
+* meeko
+* vina
 
 ## Install
 
+Conda or Miniconda can install the dependencies:
+```bash
+conda install -c conda-forge numpy scipy rdkit
 ```
-conda create -n meeko-vina -c conda-forge python=3.8
-conda activate meeko-vina
+
+## Installation (from PyPI)
+```bash
 pip install vina meeko
 ```
 
