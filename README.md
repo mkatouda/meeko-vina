@@ -18,7 +18,7 @@ Conda or Miniconda can install the dependencies:
 conda install -c conda-forge numpy scipy rdkit
 ```
 
-## Installation (from PyPI)
+Installation (from PyPI)
 ```bash
 pip install vina meeko
 ```
