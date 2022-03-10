@@ -241,7 +241,6 @@ def vina_dock(conf):
     # Minimized locally the current pose
     energy_minimized = v.optimize()
     print('Score after minimization : %.3f (kcal/mol)' % energy_minimized[0])
-    #v.write_pose('1iep_ligand_minimized.pdbqt', overwrite=True)
 
     # Dock the ligand
     v.dock(exhaustiveness=conf.exhaustiveness, n_poses=conf.num_modes)
