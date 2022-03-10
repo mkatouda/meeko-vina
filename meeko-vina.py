@@ -227,7 +227,7 @@ def vina_dock(conf):
 
     # Set up vina object
     verbosity = 1 if conf.debug else 0
-    v = Vina(sf_name=conf.scoring, cpu=conf.cpu, verbosity=verbosity)
+    v = Vina(sf_name=conf.scoring, cpu=conf.cpu, seed=conf.seed, verbosity=verbosity)
     v.set_receptor(rigid_pdbqt_filename=conf.receptor)
     v.set_ligand_from_string(mol_pdbqt_in)
     v.compute_vina_maps(center=center, box_size=box_size)
@@ -249,12 +249,14 @@ def vina_dock(conf):
 
     root, ext = os.path.splitext(conf.out)
     v.write_poses(root+'.pdbqt', n_poses=conf.num_modes, overwrite=True)
+    tmp_str = v.poses(n_poses=1, energy_range=3.0)
+    print(tmp_str)
 
-    pdbqt_out = PDBQTMolecule.from_file(root+'.pdbqt', skip_typing=True)
-    print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
+    #pdbqt_out = PDBQTMolecule.from_file(root+'.pdbqt', skip_typing=True)
+    #print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
     #Chem.MolToMolFile(pdbqt_out[0].export_rdkit_mol(), root +'_pose0.mol)
-    for i, pose in enumerate(pdbqt_out):
-        Chem.MolToMolFile(pose.export_rdkit_mol(), '{}_{:02}{}'.format(root, i, '.mol'))
+    #for i, pose in enumerate(pdbqt_out):
+    #    Chem.MolToMolFile(pose.export_rdkit_mol(), '{}_{:02}{}'.format(root, i, '.mol'))
 
 def main():
     args = get_parser()
