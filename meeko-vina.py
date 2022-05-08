@@ -154,6 +154,14 @@ def get_parser():
         "mode and the worst one displayed (kcal/mol)"
     )
     parser.add_argument(
+        "--score_only", action='store_true',
+        help="evaluate the energy of the current pose or poses without strucutre optimization"
+    )
+    parser.add_argument(
+        "--local_only", action='store_true',
+        help="evaluate the energy of the current pose or poses with local structure optimization"
+    )
+    parser.add_argument(
         "-d", "--debug", action='store_true',
         help="debug mode"
     )
@@ -238,13 +246,16 @@ def vina_dock(conf):
     energy = v.score()
     print('Score before minimization: %.3f (kcal/mol)' % energy[0])
 
-    # Minimized locally the current pose
-    energy_minimized = v.optimize()
-    print('Score after minimization : %.3f (kcal/mol)' % energy_minimized[0])
+    if not conf.score_only:
 
-    # Dock the ligand
-    v.dock(exhaustiveness=conf.exhaustiveness, n_poses=conf.num_modes)
-    print("Vina Docking energies:\n", v.energies())
+        # Minimized locally the current pose
+        energy_minimized = v.optimize()
+        print('Score after minimization : %.3f (kcal/mol)' % energy_minimized[0])
+
+        if not conf.local_only:
+            # Dock the ligand
+            v.dock(exhaustiveness=conf.exhaustiveness, n_poses=conf.num_modes)
+            print("Vina Docking energies:\n", v.energies())
 
     root, ext = os.path.splitext(conf.out)
     v.write_poses(root+'.pdbqt', n_poses=conf.num_modes, overwrite=True)
