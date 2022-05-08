@@ -248,7 +248,7 @@ def vina_dock(conf):
 
     root, ext = os.path.splitext(conf.out)
     if conf.score_only:
-        remarks='REMARK VINA RESULT:    {:>.3f}      0.000      0.000'.format(energy[0])
+        remarks='VINA RESULT:    {:>.3f}      0.000      0.000'.format(energy[0])
         v.write_pose(root+'.pdbqt', remarks=remarks, overwrite=True)
     else:
         # Minimized locally the current pose
