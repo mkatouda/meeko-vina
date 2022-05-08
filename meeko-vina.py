@@ -246,26 +246,29 @@ def vina_dock(conf):
     energy = v.score()
     print('Score before minimization: %.3f (kcal/mol)' % energy[0])
 
-    if not conf.score_only:
-
+    root, ext = os.path.splitext(conf.out)
+    if conf.score_only:
+        remarks='REMARK VINA RESULT:    {:>.3f}      0.000      0.000'.format(energy[0])
+        v.write_pose(root+'.pdbqt', remarks=remarks, overwrite=True)
+    else:
         # Minimized locally the current pose
         energy_minimized = v.optimize()
         print('Score after minimization : %.3f (kcal/mol)' % energy_minimized[0])
 
-        if not conf.local_only:
+        if conf.local_only:
+            v.write_pose(root+'.pdbqt', overwrite=True)
+        else:
             # Dock the ligand
             v.dock(exhaustiveness=conf.exhaustiveness, n_poses=conf.num_modes)
             print("Vina Docking energies:\n", v.energies())
-
-    root, ext = os.path.splitext(conf.out)
-    v.write_poses(root+'.pdbqt', n_poses=conf.num_modes, overwrite=True)
+            v.write_poses(root+'.pdbqt', n_poses=conf.num_modes, overwrite=True)
 
     pdbqt_out = PDBQTMolecule.from_file(root+'.pdbqt', skip_typing=True)
     print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
     #Chem.MolToMolFile(pdbqt_out[0].export_rdkit_mol(), root +'_pose0.mol)
     for i, pose in enumerate(pdbqt_out):
         Chem.MolToMolFile(pose.export_rdkit_mol(), '{}_{:02}{}'.format(root, i, '.mol'))
-
+        
 def main():
     args = get_parser()
     print(args)
