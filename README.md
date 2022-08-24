@@ -7,20 +7,16 @@ python script easy to use Autodock Vina basic docking simualation
 * python (>=3.6)
 * numpy
 * scipy
+* pandas
 * rdkit
 * meeko
 * vina
 
 ## Install
 
-Conda or Miniconda can install the dependencies:
+Local install
 ```bash
-conda install -c conda-forge numpy scipy rdkit
-```
-
-Installation (from PyPI)
-```bash
-pip install vina meeko
+pip install -e .
 ```
 
 ## Usage
@@ -29,13 +25,13 @@ pip install vina meeko
 
 - Ligand input from file
 ```
-python meeko-vina.py -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
+meekovina -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
 ```
 
 - Ligand input from SMILES
 
 ```
-python meeko-vina.py --input_smiles INPUT_SMILES -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
+meekovina --input_smiles INPUT_SMILES -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
 ```
 
 ### Optional arguments
