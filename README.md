@@ -1,6 +1,6 @@
 # meekovina
 
-python script easy to use Autodock Vina basic docking simualation
+python script easy to use Autodock Vina basic docking simulation
 
 ## Requirements
 
