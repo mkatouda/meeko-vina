@@ -10,21 +10,29 @@ from vina import Vina
 from meeko import MoleculePreparation, PDBQTMolecule
 
 """
-# meeko-vina
+# meekovina
 
 Python script Easy to use Autodock Vina basic docking simualation
 
 ## Requirements
 
-1. python: 3.6 or later
-2. rdkit
-3. meeko
+*. python: 3.6 or later
+* numpy
+* scipy
+* pandas
+* rdkit
+* meeko
+* vina
 
 ## Install
 
-conda create -n meeko-vina -c conda-forge python=3.8
-conda activate meeko-vina
-pip install vina meeko
+- Install from github
+pip install git+https://github.com/mkatouda/meekovina.git
+
+- Local install
+git clone https://github.com/mkatouda/meekovina.git
+cd meekovina
+pip install -e .
 
 ## Usage
 
@@ -32,11 +40,11 @@ pip install vina meeko
 
 - Ligand input from file
 
-python meeko-vina.py -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y  -cz CENTER_Z
+meekovina -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y  -cz CENTER_Z
 
 - Ligand input from SMILES
 
-python meeko-vina.py -input_smiles INPUT_SMILES -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y  -cz CENTER_Z
+meekovina -input_smiles INPUT_SMILES -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y  -cz CENTER_Z
 
 ### Optional arguments
 
@@ -231,7 +239,7 @@ def vina_dock(conf):
     box_size = [conf.size_x, conf.size_y, conf.size_z]
 
     mol_pdbqt_in = set_ligand_pdbqt(conf)
-    print(mol_pdbqt_in)
+    #print(mol_pdbqt_in)
 
     # Set up vina object
     verbosity = 1 if conf.debug else 0

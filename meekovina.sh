@@ -25,15 +25,7 @@ meekovina -l ${ligand} -r ${receptor} \
     --out ${out} \
     -d
 
-#python ./meekovina/meekovina.py -l ${ligand} -r ${receptor} \
-#    --center_x ${center_x} --center_y ${center_y} --center_z ${center_z} \
-#    --size_x ${size_x} --size_y ${size_y} --size_z ${size_z} \
-#    --cpu ${cpu} --exhaustiveness ${exhaustiveness} --num_modes=${num_modes} \
-#    --seed ${seed} \
-#    --out ${out} \
-#    -d
-
-#python -m meekovina --input_smiles \"${ligand_smi}\" -r ${receptor} \
+#meekovina --input_smiles \"${ligand_smi}\" -r ${receptor} \
 #    --center_x ${center_x} --center_y ${center_y} --center_z ${center_z} \
 #    --size_x ${size_x} --size_y ${size_y} --size_z ${size_z} \
 #    --cpu ${cpu} --exhaustiveness ${exhaustiveness} --num_modes=${num_modes} \

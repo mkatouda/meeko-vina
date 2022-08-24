@@ -1,4 +1,4 @@
-# meeko-vina
+# meekovina
 
 python script easy to use Autodock Vina basic docking simualation
 
@@ -14,8 +14,15 @@ python script easy to use Autodock Vina basic docking simualation
 
 ## Install
 
+Install from github
+```bash
+pip install git+https://github.com/mkatouda/meekovina.git
+```
+
 Local install
 ```bash
+git clone https://github.com/mkatouda/meekovina.git
+cd meekovina
 pip install -e .
 ```
 
