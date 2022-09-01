@@ -4,7 +4,7 @@ setup(
     name="meekovina",
     version="0.1.0",
     install_requires=[
-        "numpy", "scipy", "pandas", "rdkit", "meeko", "vina",
+        "numpy", "scipy", "pandas", "matplotlib", "rdkit", "meeko", "vina",
     ],
     entry_points={
         'console_scripts': [
@@ -20,5 +20,5 @@ setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
-    python_requires='>=3',
+    python_requires='>=3.7',
 )
