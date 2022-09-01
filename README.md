@@ -4,7 +4,7 @@ python script easy to use Autodock Vina basic docking simulation
 
 ## Requirements
 
-* python (>=3.6)
+* python (>=3.7)
 * numpy
 * scipy
 * pandas
