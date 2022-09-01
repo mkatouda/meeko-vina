@@ -1,8 +1,13 @@
+cycler==0.11.0
+fonttools==4.37.1
+kiwisolver==1.4.4
+matplotlib==3.5.3
 meeko==0.3.3
 numpy==1.23.2
 pandas==1.4.3
 Pillow==9.2.0
 python-dateutil==2.8.2
+matplotlib==3.5.3
 pytz==2022.2.1
 rdkit==2022.3.5
 scipy==1.9.0
