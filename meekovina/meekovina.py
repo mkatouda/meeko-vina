@@ -2,11 +2,11 @@
 import sys
 import os
 import argparse
+import numpy as np
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdMolTransforms
 from rdkit.Geometry import Point3D
-from vina import Vina
 from meeko import MoleculePreparation, PDBQTMolecule
 
 """
@@ -16,13 +16,14 @@ Python script Easy to use Autodock Vina basic docking simualation
 
 ## Requirements
 
-*. python: 3.6 or later
+* python: 3.7 or later
 * numpy
 * scipy
 * pandas
 * rdkit
 * meeko
-* vina
+* vina 1.2.3 python API
+* AutoDock-Vina 1.2.3 binary
 
 ## Install
 
@@ -153,13 +154,27 @@ def get_parser():
         "(roughly proportional to time): 1+"
     )
     parser.add_argument(
+        "--max_evals", type=int, default=0,
+        help="number of evaluations in each MC run (if zero,"
+        "which is the default, the number of MC steps is"
+        "based on heuristics)"
+    )
+    parser.add_argument(
         "--num_modes", type=int, default=9,
         help="maximum number of binding modes to generate"
+    )
+    parser.add_argument(
+        "--min_rmsd", type=int, default=1,
+        help="minimum RMSD between output poses"
     )
     parser.add_argument(
         "--energy_range", type=int, default=3,
         help="maximum energy difference between the best binding"
         "mode and the worst one displayed (kcal/mol)"
+    )
+    parser.add_argument(
+        "--spacing", type=float, default=0.375,
+        help="grid spacing (Angstrom)"
     )
     parser.add_argument(
         "--score_only", action='store_true',
@@ -168,6 +183,10 @@ def get_parser():
     parser.add_argument(
         "--local_only", action='store_true',
         help="evaluate the energy of the current pose or poses with local structure optimization"
+    )
+    parser.add_argument(
+        "-b", "--binpath", type=str, default='vina',
+        help="AutoDock-Vina binary path"
     )
     parser.add_argument(
         "-d", "--debug", action='store_true',
@@ -187,58 +206,131 @@ def get_parser():
 
     return args 
 
-def set_ligand_pdbqt(conf):
-    if conf.ligand:
-        root, ext = os.path.splitext(conf.ligand)
-        ext = ext.lower()
-        print('ext: ', ext)
-        if ext == '.pdbqt':
-            mol = PDBQTMolecule.from_file(conf.ligand, skip_typing=True)[0].export_rdkit_mol()
-        elif ext == '.mol' or ext == '.sdf':
-            mol = Chem.MolFromMolFile(conf.ligand)
-        elif ext == '.mol2':
-            mol = Chem.MolFromMol2File(conf.ligand)
-        elif ext == '.pdb':
-            mol = Chem.MolFromPDBFile(conf.ligand)
-        else:
-            print('Error: input file {} is not supported file format'.format(conf.ligand))
-            sys.exit(1)
-    elif conf.input_smiles:
-        mol = Chem.MolFromSmiles(conf.input_smiles)
+def file2rdmol(file_path):
+    root, ext = os.path.splitext(file_path)
+    ext = ext.lower()
+    #print('ext: ', ext)
+    if ext == '.pdbqt':
+        mol = PDBQTMolecule.from_file(file_path, skip_typing=True)[0].export_rdkit_mol()
+    elif ext == '.mol' or ext == '.sdf':
+        mol = Chem.MolFromMolFile(file_path)
+    elif ext == '.mol2':
+        mol = Chem.MolFromMol2File(file_path)
+    elif ext == '.pdb':
+        mol = Chem.MolFromPDBFile(file_path)
+    else:
+        print('Error: input file {} is not supported file format'.format(file_path))
+        sys.exit(1)
+    return mol
+
+def set_ligand_pdbqt(ligand_path, center, input_smiles=None, output_pdbqt_path=None, debug=False):
+
+    if os.path.isfile(ligand_path):
+        mol = file2rdmol(ligand_path)
+    elif input_smiles:
+        mol = Chem.MolFromSmiles(input_smiles)
         mol = Chem.AddHs(mol)
         AllChem.EmbedMolecule(mol,AllChem.ETKDGv3())
         mol = Chem.RemoveHs(mol)
     else:
-        print('Error: no ligand input file or SMILES')
+        print('Error: no ligand input file {} or SMILES'.format(ligand_path))
         sys.exit(1)
-    if conf.debug:
-        print(Chem.MolToMolBlock(mol))
+    if debug: print(Chem.MolToMolBlock(mol))
 
     mol_conf = mol.GetConformer(-1)
     com = list(rdMolTransforms.ComputeCentroid(mol_conf))
-    center = [conf.center_x, conf.center_y, conf.center_z]
-    print('com: ', com, 'center: ', center)
+
+    #print('PM\n', rdMolTransforms.ComputePrincipalAxesAndMoments(mol_conf))
+
+    if debug: print('com of ligand: ', com, 'reference center: ', center)
     tr = [center[i] - com[i] for i in range(3)]
+    rmax = 0.0
+    rg = 0.0
     for i, p in enumerate(mol_conf.GetPositions()):
         #print(i, p)
         mol_conf.SetAtomPosition(i, Point3D(p[0]+tr[0], p[1]+tr[1], p[2]+tr[2]))
-    if conf.debug:
-        print(Chem.MolToMolBlock(mol))
+        r2 = (p[0]-com[0])**2 + (p[1]-com[1])**2 + (p[2]-com[2])**2
+        rg += r2
+        r = np.sqrt(r2)
+        if r > rmax:
+            rmax = r
+    rg = np.sqrt(rg / mol.GetNumAtoms())
+    print('rmax:', rmax, 'rg:', rg)
+    if debug: print(Chem.MolToMolBlock(mol))
 
     preparator = MoleculePreparation(hydrate=True)
     preparator.prepare(mol)
-    preparator.show_setup()
     mol_pdbqt = preparator.write_pdbqt_string()
-    if conf.debug:
+    if isinstance(output_pdbqt_path, str):
+        preparator.write_pdbqt_file(output_pdbqt_path)
+
+    if debug:
+        preparator.show_setup()
         print(mol_pdbqt)
 
-    return mol_pdbqt
+    return mol_pdbqt, rmax, rg
 
-def vina_dock(conf):
+def vina_dock_bin(conf):
+    import subprocess
+
     center = [conf.center_x, conf.center_y, conf.center_z]
     box_size = [conf.size_x, conf.size_y, conf.size_z]
 
-    mol_pdbqt_in = set_ligand_pdbqt(conf)
+    receptor_path = conf.receptor
+    root, ext = os.path.splitext(conf.out)
+    input_ligand_path = root + '_vinain.pdbqt'
+    output_ligand_path = root + '.pdbqt'
+
+    mol_pdbqt_in, rmax, rg = set_ligand_pdbqt(conf.ligand, center,
+                                              output_pdbqt_path=input_ligand_path,
+                                              debug=conf.debug)
+    #print(mol_pdbqt_in)
+
+    # Set up vina 
+    verbosity = 1 if conf.debug else 0
+    cmd = [conf.binpath,
+           '--receptor', receptor_path,
+           '--ligand', input_ligand_path,
+           '--center_x', str(center[0]),
+           '--center_y', str(center[1]),
+           '--center_z', str(center[2]),
+           '--size_x', str(box_size[0]),
+           '--size_y', str(box_size[1]),
+           '--size_z', str(box_size[2]),
+           '--out', output_ligand_path,
+           '--cpu', str(conf.cpu),
+           '--seed', str(conf.seed),
+           '--exhaustiveness', str(conf.exhaustiveness),
+           '--max_evals', str(conf.max_evals),
+           '--num_modes', str(conf.num_modes),
+           '--min_rmsd', str(conf.min_rmsd),
+           '--energy_range', str(conf.energy_range),
+           '--spacing', str(conf.spacing),
+           '--verbosity', str(verbosity)]
+    if conf.debug: print(' '.join(cmd))
+
+    results = subprocess.run(cmd, check=True)
+
+    pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
+    #print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
+    #Chem.MolToMolFile(pdbqt_out[0].export_rdkit_mol(), root +'_pose0.mol')
+    for i, pose in enumerate(pdbqt_out):
+        Chem.MolToMolFile(pose.export_rdkit_mol(), '{}_{:02}{}'.format(root, i, '.mol'))
+
+def vina_dock_lib(conf):
+    from vina import Vina
+
+    center = [conf.center_x, conf.center_y, conf.center_z]
+    box_size = [conf.size_x, conf.size_y, conf.size_z]
+
+    receptor_path = conf.receptor
+    root, ext = os.path.splitext(conf.out)
+    input_ligand_path = root + '_vinain.pdbqt'
+    output_ligand_path = root + '.pdbqt'
+
+    mol_pdbqt_in, rmax, rg = set_ligand_pdbqt(conf.ligand, center,
+                                              output_pdbqt_path=input_ligand_path,
+                                              debug=conf.debug)
     #print(mol_pdbqt_in)
 
     # Set up vina object
@@ -248,16 +340,15 @@ def vina_dock(conf):
     v.set_ligand_from_string(mol_pdbqt_in)
     v.compute_vina_maps(center=center, box_size=box_size)
 
-    print(v.info())
+    if conf.debug: print(v.info())
 
     # Score the current pose
     energy = v.score()
     print('Score before minimization: %.3f (kcal/mol)' % energy[0])
 
-    root, ext = os.path.splitext(conf.out)
     if conf.score_only:
         remarks='VINA RESULT:    {:>.3f}      0.000      0.000'.format(energy[0])
-        v.write_pose(root+'.pdbqt', remarks=remarks, overwrite=True)
+        v.write_pose(output_ligand_path, remarks=remarks, overwrite=True)
     else:
         # Minimized locally the current pose
         energy_minimized = v.optimize()
@@ -269,18 +360,22 @@ def vina_dock(conf):
             # Dock the ligand
             v.dock(exhaustiveness=conf.exhaustiveness, n_poses=conf.num_modes)
             print("Vina Docking energies:\n", v.energies())
-            v.write_poses(root+'.pdbqt', n_poses=conf.num_modes, overwrite=True)
+            v.write_poses(output_ligand_path, n_poses=conf.num_modes, overwrite=True)
 
-    pdbqt_out = PDBQTMolecule.from_file(root+'.pdbqt', skip_typing=True)
-    print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
-    #Chem.MolToMolFile(pdbqt_out[0].export_rdkit_mol(), root +'_pose0.mol)
+    pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
+    #print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
+    #Chem.MolToMolFile(pdbqt_out[0].export_rdkit_mol(), root +'_pose0.mol')
     for i, pose in enumerate(pdbqt_out):
         Chem.MolToMolFile(pose.export_rdkit_mol(), '{}_{:02}{}'.format(root, i, '.mol'))
         
 def main():
     args = get_parser()
     print(args)
-    vina_dock(args)
+
+    if os.path.isfile(args.binpath):
+        vina_dock_bin(args)
+    else:
+        vina_dock_lib(args)
 
 if __name__ == "__main__":
     main()
