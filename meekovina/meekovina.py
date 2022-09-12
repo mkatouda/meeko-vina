@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import shutil
 import argparse
 import numpy as np
 from rdkit import Chem
@@ -372,6 +373,10 @@ def main():
     args = get_parser()
     print(args)
 
+    if not os.path.exists(args.binpath):
+        binpath = shutil.which('vina')
+        if os.path.exists(binpath): args.binpath = binpath
+        
     if os.path.isfile(args.binpath):
         vina_dock_bin(args)
     else:
