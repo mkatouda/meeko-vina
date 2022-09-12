@@ -9,8 +9,8 @@ python script easy to use Autodock Vina basic docking simulation
 * scipy
 * pandas
 * rdkit
-* meeko
-* vina
+* vina 1.2.3 python API
+* AutoDock-Vina 1.2.3 binary
 
 ## Install
 
