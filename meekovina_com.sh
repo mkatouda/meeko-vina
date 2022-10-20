@@ -1,10 +1,11 @@
 #!/bin/bash
 
-ligand=inputs/1iep_ligand.sdf
-#ligand=inputs/1iep_ligand.mol
-#ligand=inputs/1iep_ligand.pdbqt
+ligand=./1iep_ligand.sdf
+#ligand=./1iep_ligand.mol
+#ligand=./1iep_ligand.pdbqt
 ligand_smi=Oc1ccccc1
-receptor=inputs/1iep_receptorH.pdbqt
+receptor=./1iep_receptorH.pdbqt
+refligand=./1iep_ligand.sdf
 out=1iep_ligand_out.pdbqt
 center_x=15.190
 center_y=53.903
@@ -22,15 +23,19 @@ meekovina -l ${ligand} -r ${receptor} \
     --size_x ${size_x} --size_y ${size_y} --size_z ${size_z} \
     --cpu ${cpu} --exhaustiveness ${exhaustiveness} --num_modes=${num_modes} \
     --seed ${seed} \
-    --out ${out} \
-    -d
+    --out ${out}
 
 #meekovina --input_smiles \"${ligand_smi}\" -r ${receptor} \
 #    --center_x ${center_x} --center_y ${center_y} --center_z ${center_z} \
 #    --size_x ${size_x} --size_y ${size_y} --size_z ${size_z} \
 #    --cpu ${cpu} --exhaustiveness ${exhaustiveness} --num_modes=${num_modes} \
 #    --seed ${seed} \
-#    --out ${out} \
-#    -d
+#    --out ${out}
+
+#meekovina -l ${ligand} -r ${receptor} -rl ${refligand} \
+#    --size_x ${size_x} --size_y ${size_y} --size_z ${size_z} \
+#    --cpu ${cpu} --exhaustiveness ${exhaustiveness} --num_modes=${num_modes} \
+#    --seed ${seed} \
+#    --out ${out}
 
 exit 0

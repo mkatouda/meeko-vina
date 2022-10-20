@@ -4,7 +4,7 @@ setup(
     name="meekovina",
     version="0.2.0",
     install_requires=[
-        "numpy", "scipy", "pandas", "rdkit", "meeko",
+        "pyyaml", "numpy", "scipy", "pandas", "rdkit", "meeko",
     ],
     entry_points={
         'console_scripts': [
