@@ -1,11 +1,11 @@
 #!/bin/bash
 
-ligand=./1iep_ligand.sdf
-#ligand=./1iep_ligand.mol
-#ligand=./1iep_ligand.pdbqt
+ligand=./inputs/1iep_ligand.sdf
+#ligand=./inputs/1iep_ligand.mol
+#ligand=./inputs/1iep_ligand.pdbqt
 ligand_smi=Oc1ccccc1
-receptor=./1iep_receptorH.pdbqt
-refligand=./1iep_ligand.sdf
+receptor=./inputs/1iep_receptorH.pdbqt
+refligand=./inputs/1iep_ligand.sdf
 out=1iep_ligand_out.pdbqt
 center_x=15.190
 center_y=53.903

@@ -1,16 +1,4 @@
 #!/usr/bin/env python
-import sys
-import os
-import shutil
-import argparse
-
-import numpy as np
-import yaml
-from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem import rdMolTransforms
-from rdkit.Geometry import Point3D
-from meeko import MoleculePreparation, PDBQTMolecule
 
 """
 # meekovina
@@ -100,6 +88,20 @@ This package is distributed under the MIT License.
 
 """
 
+import sys
+import os
+import shutil
+import argparse
+
+import numpy as np
+import yaml
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from rdkit.Chem import rdMolTransforms
+from rdkit.Geometry import Point3D
+from meeko import MoleculePreparation, PDBQTMolecule
+
+
 def get_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -114,7 +116,7 @@ def get_parser():
         #"meekovina --input_smiles INPUT_SMILES -r RECEPTOR -rl REFLIGAND -o OUTPUT\n"
     )
     parser.add_argument(
-        "-i", "--input", type=str,
+        "-i", "--inp", type=str,
         help="yaml style input file, overwriting argument values",
     )
     parser.add_argument(
@@ -248,16 +250,15 @@ def get_parser():
 
 def set_config(args):
     # Read config yaml file
-    if args.input is not None and os.path.isfile(args.input):
-        with open(args.input, 'r') as f:
+    if args.inp is not None and os.path.isfile(args.inp):
+        with open(args.inp, 'r') as f:
             conf = yaml.safe_load(f)
     else:
         conf = {}
 
     # Set up default config values from program arguments
     conf_def = vars(args).copy()
-    del conf_def['input'], conf_def['debug']
-    conf_def = {k: v for k, v in conf_def.items() if v is not None}
+    del conf_def['inp']
     [conf.setdefault(k, v) for k, v in conf_def.items()]
 
     return conf
@@ -470,8 +471,8 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path,
             # Dock the ligand
             v.dock(exhaustiveness=exhaustiveness, n_poses=num_modes,
                    min_rmsd=min_rmsd, max_evals=max_evals)
-            print("Vina Docking energies:\n", num_modes, '\n',
-                  v.energies(n_poses=(num_modes+1), energy_range=energy_range))
+            #print("Vina Docking energies:\n",
+            #      v.energies(n_poses=(num_modes+1), energy_range=energy_range))
             v.write_poses(output_ligand_path, n_poses=num_modes, 
                           energy_range=energy_range, overwrite=True)
 
@@ -570,6 +571,7 @@ def vina_dock_main(conf, debug=False):
     vina_verbosity = conf['verbosity']
     vina_score_only = conf['score_only']
     vina_local_only = conf['local_only']
+    vina_debug = conf['debug']
 
     scores = vina_dock(protein_pdbqt_path,
                        ligand_path,
@@ -592,14 +594,13 @@ def vina_dock_main(conf, debug=False):
                        verbosity=vina_verbosity,
                        score_only=vina_score_only,
                        local_only=vina_local_only,
-                       debug=debug)
+                       debug=vina_debug)
 
     return scores
        
 def main():
     args = get_parser()
-    debug = args.debug
-    if debug: print(args)
+    if args.debug: print(args)
 
     conf = set_config(args)
 
@@ -608,7 +609,7 @@ def main():
         print('{}: {}'.format(k, v))
     print('====================================')
 
-    vina_dock_main(conf, debug=debug)
+    vina_dock_main(conf)
 
 if __name__ == '__main__':
     main()

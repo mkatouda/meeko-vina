@@ -1,6 +1,6 @@
-ligand: './1iep_ligand.sdf'
-refligand: './1iep_ligand.sdf'
-receptor: './1iep_receptorH.pdbqt'
+ligand: './inputs/1iep_ligand.sdf'
+refligand: './inputs/1iep_ligand.sdf'
+receptor: './inputs/1iep_receptorH.pdbqt'
 out: '1iep_ligand_out.pdbqt'
 center_x: 15.190
 center_y: 53.903
