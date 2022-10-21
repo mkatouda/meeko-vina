@@ -416,7 +416,7 @@ def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, vina_bin_path,
     return scores
 
 def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path,
-                  bexcenter, boxauto=True, boxsize=[22.5, 22.5, 22.5], gybox_ratio=4.0,
+                  boxcenter, boxauto=True, boxsize=[22.5, 22.5, 22.5], gybox_ratio=4.0,
                   scoring='vina', cpu=0, seed=0, exhaustiveness=8,
                   max_evals=0, num_modes=9, min_rmsd=1, energy_range=3,
                   spacing=0.375, verbosity=1,
