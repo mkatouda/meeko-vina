@@ -8,7 +8,7 @@ center_z: 16.917
 size_x: 20.0
 size_y: 20.0
 size_z: 20.0
-cpu: 8
-exhaustiveness: 8
+cpu: 2
+exhaustiveness: 3
 num_modes: 9
 seed: 1234
