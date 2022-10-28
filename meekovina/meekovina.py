@@ -5,16 +5,23 @@
 
 Python script Easy to use Autodock Vina basic docking simualation
 
-## Requirements
+## License
 
-* python: 3.7 or later
-* numpy
-* scipy
-* pandas
-* rdkit
-* meeko
-* vina 1.2.3 python API
-* AutoDock-Vina 1.2.3 binary
+This package is distributed under the MIT License.
+
+## Required libiraries
+
+1. python: 3.7 or later
+2. pyyaml
+3. numpy
+4. scipy
+5. pandas
+6. rdkit (https://www.rdkit.org/)
+7. AutoDock-Vina 1.2.3 binary (https://github.com/ccsb-scripps/AutoDock-Vina )
+
+## Optional libiraries
+
+8. vina 1.2.3 python API (https://github.com/ccsb-scripps/AutoDock-Vina )
 
 ## Install
 
@@ -82,10 +89,6 @@ Misc (optional):
 Information (optional):
   --help                display usage summary
 
-## License
-
-This package is distributed under the MIT License.
-
 """
 
 import sys
@@ -136,8 +139,8 @@ def get_parser():
         help="SMILES string (Need to put the atom you want to extend at the end of the string)"
     )
     parser.add_argument(
-        "-rl","--refligand", type=str,
-        help="ligand (PDBQT, MOL, SDF, MOL2, PDB) to determine the box center"
+        "-lr","--refligand", type=str,
+        help="reference ligand (PDBQT, MOL, SDF, MOL2, PDB) to determine the box center"
     )
     parser.add_argument(
         "-cx", "--center_x", type=float,
@@ -217,7 +220,7 @@ def get_parser():
         help="evaluate the energy of the current pose or poses with local structure optimization"
     )
     parser.add_argument(
-        "--exec", type=str, default='lib',
+        "--exec", type=str, default='bin',
         help="select AutoDock-Vina executer"
     )
     parser.add_argument(
@@ -226,11 +229,12 @@ def get_parser():
     )
     parser.add_argument(
         "--boxauto", action='store_true',
-        help="boxauto"
+        help = "enable automatic box determination algorithm"
     )
     parser.add_argument(
         "--gybox_ratio", type=float, default=2.5,
-        help="box ratio"
+        help = "scaling factor of radius of gyration to determine of docking box\n"
+               "with automatic box determination algorithm"
     )
     parser.add_argument(
         "-d", "--debug", action='store_true',
