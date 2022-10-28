@@ -6,6 +6,10 @@ python script easy to use Autodock Vina basic docking simulation
 
 This package is distributed under the MIT License.
 
+## Tutorial
+
+You can enjoy tutorial via google Colab (https://colab.research.google.com/github/mkatouda/meekovina/blob/main/meekovina_tutorial_jp.ipynb )
+
 ## Requirements
 
 1. python (>=3.7)
