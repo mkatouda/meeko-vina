@@ -75,6 +75,7 @@ Search space (optional):
 Output (optional):
   --out arg             output models (PDBQT), MOL, the default is chosen based on 
                         the ligand file name
+  --outdir arg          make output directry if argument is specified
 
 Misc (optional):
   --cpu arg                 the number of CPUs to use (the default is to try to
@@ -97,6 +98,7 @@ import shutil
 import argparse
 
 import numpy as np
+import pandas as pd
 import yaml
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -109,14 +111,6 @@ def get_parser():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description="python script easy to use Autodock Vina basic docking simulation"
-        #"- Ligand input from LIGAND file\n"
-        #"meekovina -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z\n\n"
-        #"- Ligand input from file and center of box is determined by the REFLIGAND file\n"
-        #"meekovina -l LIGAND -r RECEPTOR -rl REFLIGAND -o OUTPUT\n\n"
-        #"- Ligand input from SMILES string\n"
-        #"meekovina --input_smiles INPUT_SMILES -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z\n\n"
-        #"- Ligand input from SMILES string and center of box is determined by the REFLIGAND file\n"
-        #"meekovina --input_smiles INPUT_SMILES -r RECEPTOR -rl REFLIGAND -o OUTPUT\n"
     )
     parser.add_argument(
         "-i", "--inp", type=str,
@@ -127,20 +121,24 @@ def get_parser():
         help="ligand (PDBQT, MOL, SDF, MOL2, PDB)"
     )
     parser.add_argument(
+        "--input_smiles", type=str,
+        help="SMILES string (Need to put the atom you want to extend at the end of the string)"
+    )
+    parser.add_argument(
         "-r", "--receptor", type=str,
         help="rigid part of the receptor (PDBQT)"
+    )
+    parser.add_argument(
+        "-lr", "--refligand", type=str,
+        help="reference ligand (PDBQT, MOL, SDF, MOL2, PDB) to determine the box center"
     )
     parser.add_argument(
         "-o", "--out", type=str,
         help="output models (PDBQT), the default is chosen based on the ligand file name"
     )
     parser.add_argument(
-        "--input_smiles", type=str,
-        help="SMILES string (Need to put the atom you want to extend at the end of the string)"
-    )
-    parser.add_argument(
-        "-lr","--refligand", type=str,
-        help="reference ligand (PDBQT, MOL, SDF, MOL2, PDB) to determine the box center"
+        "-od", "--outdir", type=str,
+        help="make output directry if argument is specified"
     )
     parser.add_argument(
         "-cx", "--center_x", type=float,
@@ -262,7 +260,7 @@ def set_config(args):
 
     # Set up default config values from program arguments
     conf_def = vars(args).copy()
-    del conf_def['inp']
+    #del conf_def['inp']
     [conf.setdefault(k, v) for k, v in conf_def.items()]
 
     return conf
@@ -342,7 +340,19 @@ def set_ligand_pdbqt(ligand_path, center, input_smiles=None, output_pdbqt_path=N
 
     return mol_pdbqt, rmax, rg
 
-def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, vina_bin_path,
+def dockscore_summary(output_ligand_path, output_csv_path):
+    scores = []
+    with open(output_ligand_path) as f:
+        for l in f.readlines():
+            if 'REMARK VINA RESULT' in l:
+                scores.append([float(s) for s in l.split()[3:6]])
+
+    df_score = pd.DataFrame(scores, columns=['Docking_score', 'dist_RMSD', 'bestmode_RMSD'])
+    df_score.to_csv(output_csv_path)
+
+    return scores
+
+def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, outbasename, vina_bin_path,
                   boxcenter, boxauto=True, boxsize=[22.5, 22.5, 22.5], gybox_ratio=4.0,
                   scoring='vina', cpu=0, seed=0, exhaustiveness=8, 
                   max_evals=0, num_modes=9, min_rmsd=1, energy_range=3,
@@ -351,9 +361,9 @@ def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, vina_bin_path,
 
     import subprocess
 
-    basename = os.path.splitext(os.path.basename(ligand_path))[0]
-    input_ligand_path = './{}_vinain.pdbqt'.format(basename)
-    output_ligand_path = './{}_vinaout.pdbqt'.format(basename)
+    #outbasename = os.path.splitext(os.path.basename(ligand_path))[0]
+    input_ligand_path = './{}_vinain.pdbqt'.format(outbasename)
+    output_ligand_path = './{}_vinaout.pdbqt'.format(outbasename)
 
     if ref_ligand_path is not None and os.path.isfile(ref_ligand_path):
         center = get_ligand_com(ref_ligand_path)
@@ -406,21 +416,14 @@ def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, vina_bin_path,
     pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
     if debug: print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
     for i, pose in enumerate(pdbqt_out):
-        Chem.MolToMolFile(pose.export_rdkit_mol(), './{}_vinaout_{:02}.mol'.format(basename, i))
+        Chem.MolToMolFile(pose.export_rdkit_mol(), './{}_vinaout_{:02}.mol'.format(outbasename, i))
 
-    scores = []
-    with open(output_ligand_path) as f:
-        for l in f.readlines():
-            if 'REMARK VINA RESULT' in l:
-                scores.append(float(l.split()[3]))
-
-    #output_csv_path = './{}_vinascore.csv'.format(basename)
-    #df_score = pd.DataFrame(scores, columns=['Docking_score'])
-    #df_score.to_csv(output_csv_path)
+    output_csv_path = './{}_vinascore.csv'.format(outbasename)
+    scores = dockscore_summary(output_ligand_path, output_csv_path)
 
     return scores
 
-def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path,
+def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path, outbasename,
                   boxcenter, boxauto=True, boxsize=[22.5, 22.5, 22.5], gybox_ratio=4.0,
                   scoring='vina', cpu=0, seed=0, exhaustiveness=8,
                   max_evals=0, num_modes=9, min_rmsd=1, energy_range=3,
@@ -458,8 +461,8 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path,
     energy = v.score()
     print('Score before minimization: %.3f (kcal/mol)' % energy[0])
 
-    basename = os.path.splitext(os.path.basename(ligand_path))[0]
-    output_ligand_path = './{}_vinaout.pdbqt'.format(basename)
+    #outbasename = os.path.splitext(os.path.basename(ligand_path))[0]
+    output_ligand_path = './{}_vinaout.pdbqt'.format(outbasename)
 
     if score_only:
         remarks='VINA RESULT:    {:>.3f}      0.000      0.000'.format(energy[0])
@@ -483,21 +486,14 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path,
     pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
     if debug: print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
     for i, pose in enumerate(pdbqt_out):
-        Chem.MolToMolFile(pose.export_rdkit_mol(), './{}_vinaout_{:02}.mol'.format(basename, i))
+        Chem.MolToMolFile(pose.export_rdkit_mol(), './{}_vinaout_{:02}.mol'.format(outbasename, i))
 
-    scores = []
-    with open(output_ligand_path) as f:
-        for l in f.readlines():
-            if 'REMARK VINA RESULT' in l:
-                scores.append(float(l.split()[3]))
-
-    #output_csv_path = './{}_vinascore.csv'.format(basename)
-    #df_score = pd.DataFrame(scores, columns=['Docking_score'])
-    #df_score.to_csv(output_csv_path)
+    output_csv_path = './{}_vinascore.csv'.format(outbasename)
+    scores = dockscore_summary(output_ligand_path, output_csv_path)
 
     return scores
 
-def vina_dock(receptor_path, ligand_path, ref_ligand_path, vina_exec, vina_bin_path,
+def vina_dock(receptor_path, ligand_path, ref_ligand_path, outbasename, vina_exec, vina_bin_path,
                   boxcenter, boxauto=True, boxsize=[22.5, 22.5, 22.5], gybox_ratio=4.0,
                   scoring='vina', cpu=0, seed=0, exhaustiveness=8, 
                   max_evals=0, num_modes=9, min_rmsd=1, energy_range=3,
@@ -509,6 +505,7 @@ def vina_dock(receptor_path, ligand_path, ref_ligand_path, vina_exec, vina_bin_p
         scores = vina_dock_bin(receptor_path,
                                ligand_path,
                                ref_ligand_path,
+                               outbasename,
                                vina_bin_path,
                                boxcenter,
                                boxauto=boxauto,
@@ -533,6 +530,7 @@ def vina_dock(receptor_path, ligand_path, ref_ligand_path, vina_exec, vina_bin_p
         scores = vina_dock_lib(receptor_path,
                                ligand_path,
                                ref_ligand_path,
+                               outbasename,
                                boxcenter,
                                boxauto=boxauto,
                                boxsize=boxsize,
@@ -554,9 +552,11 @@ def vina_dock(receptor_path, ligand_path, ref_ligand_path, vina_exec, vina_bin_p
     return scores
 
 def vina_dock_main(conf, debug=False):
-    protein_pdbqt_path = conf['receptor']
-    ligand_path = conf['ligand']
-    ref_ligand_path = conf['refligand']
+    protein_pdbqt_path = os.path.abspath(conf['receptor'])
+    ligand_path = os.path.abspath(conf['ligand'])
+    ref_ligand_path = os.path.abspath(conf['refligand'])
+    vina_outbasename = conf['out']
+    vina_outdir = conf['outdir']
     vina_exec = conf['exec']
     vina_bin_path = conf['bin_path']
     vina_boxauto = conf['boxauto']
@@ -577,9 +577,15 @@ def vina_dock_main(conf, debug=False):
     vina_local_only = conf['local_only']
     vina_debug = conf['debug']
 
+    cwdir = os.getcwd()
+    if vina_outdir is not None:
+        if not os.path.isdir(vina_outdir): os.makedirs(vina_outdir)
+        os.chdir(vina_outdir)
+    
     scores = vina_dock(protein_pdbqt_path,
                        ligand_path,
                        ref_ligand_path,
+                       vina_outbasename,
                        vina_exec,
                        vina_bin_path,
                        boxcenter=vina_boxcenter,
@@ -599,6 +605,8 @@ def vina_dock_main(conf, debug=False):
                        score_only=vina_score_only,
                        local_only=vina_local_only,
                        debug=vina_debug)
+
+    os.chdir(cwdir)
 
     return scores
        
