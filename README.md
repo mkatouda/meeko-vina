@@ -8,38 +8,74 @@ This package is distributed under the MIT License.
 
 ## Tutorial
 
-You can enjoy tutorial via google Colab (https://colab.research.google.com/github/mkatouda/meekovina/blob/main/meekovina_tutorial_jp.ipynb )
+You can try tutorial of placingmd to know how to install and run:
+https://colab.research.google.com/github/mkatouda/meekovina/blob/main/meekovina_tutorial_jp.ipynb
 
 ## Requirements
 
 1. python (>=3.7)
-2. pyyaml
-3. numpy
-4. scipy
-5. pandas
+2. pyyaml (https://pyyaml.org/)
+3. numpy (https://numpy.org/)
+4. scipy (https://scipy.org/)
+5. pandas (https://pandas.pydata.org/)
 6. rdkit (https://www.rdkit.org/)
-7. vina 1.2.3 python API (https://github.com/ccsb-scripps/AutoDock-Vina )  
-8. AutoDock-Vina 1.2.3 binary (https://github.com/ccsb-scripps/AutoDock-Vina )  
+7. AutoDock-Vina 1.2.3 binary (https://github.com/ccsb-scripps/AutoDock-Vina/releases/tag/v1.2.3 )  
+
+## Optional
+
+8. vina 1.2.3 python API (https://github.com/ccsb-scripps/AutoDock-Vina )  
 
 ## Install
 
-- Create conda virtual environment  
-<pre>
-conda create -n py38-meekovina python=3.8  
-conda activate py38-meekovina  
-</pre>
+### Install with pip
 
-- Run the following command to install required conda packages  
-<pre>
-conda install -c conda-forge rdkit vina 
-</pre>
+- Install AutoDock Vina binary
 
-Install from github
+```
+wget https://github.com/ccsb-scripps/AutoDock-Vina/releases/download/v1.2.3/vina_1.2.3_linux_x86_64
+mkdir ~/bin
+mv ./vina_1.2.3_linux_x86_64 ~/bin/vina
+chmod 755 ~/bin/vina
+export PATH=~/bin/vina:$PATH
+```
+
+- Install from github
+
 ```bash
 pip install git+https://github.com/mkatouda/meekovina.git
 ```
 
-Local install
+- Local install
+
+```bash
+git clone https://github.com/mkatouda/meekovina.git
+cd meekovina
+pip install .
+```
+
+### Install with conda virtual environment
+
+- Create conda virtual environment  
+
+```
+conda create -n py38-meekovina python=3.8  
+conda activate py38-meekovina  
+```
+
+- Run the following command to install required conda packages  
+
+```
+conda install -c conda-forge rdkit vina 
+```
+
+- Install from github
+
+```bash
+pip install git+https://github.com/mkatouda/meekovina.git
+```
+
+- Local install
+
 ```bash
 git clone https://github.com/mkatouda/meekovina.git
 cd meekovina
@@ -48,7 +84,7 @@ pip install .
 
 ## Usage
 
-<pre>
+```
 usage: meekovina [-h] [-i INP] [-l LIGAND] [-r RECEPTOR] [-o OUT]
                  [--input_smiles INPUT_SMILES] [-rl REFLIGAND] [-cx CENTER_X]
                  [-cy CENTER_Y] [-cz CENTER_Z] [-sx SIZE_X] [-sy SIZE_Y]
@@ -122,11 +158,12 @@ optional arguments:
   --gybox_ratio GYBOX_RATIO
                         box ratio (default: 2.5)
   -d, --debug           debug mode (default: False)
-</pre>
+```
 
 ### Basic usage
 
 - Ligand input from file
+
 ```
 meekovina -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
 ```
@@ -137,6 +174,6 @@ meekovina -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
 meekovina --input_smiles INPUT_SMILES -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
 ```
 
-## Contact
+## Author
 
 - Michio Katouda (katouda@rist.or.jp)
