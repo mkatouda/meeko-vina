@@ -8,7 +8,7 @@ This package is distributed under the MIT License.
 
 ## Tutorial
 
-You can try tutorial of placingmd to know how to install and run:  
+You can try tutorial of meekovina to know how to install and run:  
 https://colab.research.google.com/github/mkatouda/meekovina/blob/main/meekovina_tutorial_jp.ipynb
 
 ## Requirements
