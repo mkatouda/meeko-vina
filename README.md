@@ -82,7 +82,7 @@ cd meekovina
 pip install .
 ```
 
-## Usage
+## Command usage
 
 ```
 usage: meekovina [-h] [-i INP] [-l LIGAND] [-r RECEPTOR] [-o OUT]
@@ -160,7 +160,12 @@ optional arguments:
   -d, --debug           debug mode (default: False)
 ```
 
-### Basic usage
+## Examples
+
+Input files of example jobs are loated at "meekovina/example/input". 
+You can example jobs using job script files "meekovina_com.sh" and "meekovina_yml.sh" located at "meekovina/example".
+
+### Exmaples of command line usage
 
 - Ligand input from file
 
@@ -173,6 +178,34 @@ meekovina -l LIGAND -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
 ```
 meekovina --input_smiles INPUT_SMILES -r RECEPTOR -o OUTPUT -cx CENTER_X -cy CENTER_Y -cz CENTER_Z
 ```
+
+### Exmaples of yaml input usage
+
+Prepare input yaml file input.yml:
+
+```
+ligand: './inputs/1iep_ligand.sdf'
+refligand: './inputs/1iep_ligand.sdf'
+receptor: './inputs/1iep_receptorH.pdbqt'
+out: '1iep_ligand'
+outdir: 'outputs'
+size_x: 20.0
+size_y: 20.0
+size_z: 20.0
+cpu: 2
+exhaustiveness: 3
+num_modes: 9
+seed: 1234
+```
+
+Then, run meekivina in command line:
+
+```
+meekovina -i input.yml
+```
+
+Keywards of yaml file are the same in the name of command line options.  
+See above explanation of command line options.  
 
 ## Author
 
