@@ -557,7 +557,10 @@ def vina_dock(receptor_path, ligand_path, ref_ligand_path, outbasename, vina_exe
 def vina_dock_main(conf):
     protein_pdbqt_path = os.path.abspath(conf['receptor'])
     ligand_path = os.path.abspath(conf['ligand'])
-    ref_ligand_path = os.path.abspath(conf['refligand'])
+    if conf['refligand'] is not None:
+        ref_ligand_path = os.path.abspath(conf['refligand'])
+    else:
+        ref_ligand_path = None
     vina_outbasename = conf['out']
     vina_outdir = conf['outdir']
     vina_exec = conf['exec']
