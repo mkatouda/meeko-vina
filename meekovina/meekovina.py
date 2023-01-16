@@ -403,6 +403,10 @@ def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, outbasename, vina
                '--energy_range', str(energy_range),
                '--spacing', str(spacing),
                '--verbosity', str(verbosity)]
+        if score_only:
+            cmd.append('--score_only')
+        if local_only:
+            cmd.append('--local_only')
         if debug: print(' '.join(cmd))
 
         try:
