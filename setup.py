@@ -2,9 +2,9 @@ from setuptools import setup
 
 setup(
     name="meekovina",
-    version="0.2.0",
+    version="0.3.0",
     install_requires=[
-        "pyyaml", "numpy", "scipy", "pandas", "rdkit", "meeko",
+        "pyyaml", "numpy", "scipy", "pandas", "rdkit", "meeko>=0.4.0",
     ],
     entry_points={
         'console_scripts': [

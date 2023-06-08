@@ -1,5 +1,5 @@
-ligand: './inputs/1iep_ligand.sdf'
-refligand: './inputs/1iep_ligand.sdf'
+ligand: './inputs/1iep_ligand.mol'
+refligand: './inputs/1iep_ligand.mol'
 receptor: './inputs/1iep_receptorH.pdbqt'
 out: '1iep_ligand'
 outdir: 'outputs'

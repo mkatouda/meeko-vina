@@ -1,7 +1,6 @@
 #!/bin/bash
 
-ligand=./inputs/1iep_ligand.sdf
-#ligand=./inputs/1iep_ligand.mol
+ligand=./inputs/1iep_ligand.mol
 #ligand=./inputs/1iep_ligand.pdbqt
 ligand_smi=Oc1ccccc1
 receptor=./inputs/1iep_receptorH.pdbqt

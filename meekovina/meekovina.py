@@ -15,7 +15,7 @@ This package is distributed under the MIT License.
 2. pyyaml
 3. numpy
 4. scipy
-5. pandas
+5. meeko: 0.4.0 or later
 6. rdkit (https://www.rdkit.org/)
 7. AutoDock-Vina 1.2.3 binary (https://github.com/ccsb-scripps/AutoDock-Vina )
 
@@ -96,6 +96,7 @@ import sys
 import os
 import shutil
 import argparse
+import subprocess
 
 import numpy as np
 import pandas as pd
@@ -104,7 +105,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdMolTransforms
 from rdkit.Geometry import Point3D
-from meeko import MoleculePreparation, PDBQTMolecule
+from meeko import MoleculePreparation, PDBQTMolecule, RDKitMolCreate
 
 
 def get_parser():
@@ -235,8 +236,8 @@ def get_parser():
                "with automatic box determination algorithm"
     )
     parser.add_argument(
-        "-d", "--debug", action='store_true',
-        help="debug mode"
+        "-v", "--verbose", action='store_true',
+        help="verbose mode"
     )
     args = parser.parse_args()
 
@@ -264,25 +265,27 @@ def set_config(args):
 
     return conf
 
-def file2rdmol(file_path):
+def file2rdmol(file_path, removeHs=False):
     root, ext = os.path.splitext(file_path)
     ext = ext.lower()
     #print('ext: ', ext)
     if ext == '.pdbqt':
-        mol = PDBQTMolecule.from_file(file_path, skip_typing=True)[0].export_rdkit_mol()
+        #mol = PDBQTMolecule.from_file(file_path, skip_typing=True)[0].export_rdkit_mol()
+        pdbqt_mol = PDBQTMolecule.from_file(file_path, skip_typing=True)
+        mol = RDKitMolCreate.from_pdbqt_mol(pdbqt_mol)[0]
     elif ext == '.mol' or ext == '.sdf':
-        mol = Chem.MolFromMolFile(file_path)
+        mol = Chem.MolFromMolFile(file_path, removeHs=removeHs)
     elif ext == '.mol2':
-        mol = Chem.MolFromMol2File(file_path)
+        mol = Chem.MolFromMol2File(file_path, removeHs=removeHs)
     elif ext == '.pdb':
-        mol = Chem.MolFromPDBFile(file_path)
+        mol = Chem.MolFromPDBFile(file_path, removeHs=removeHs)
     else:
         print('Error: input file {} is not supported file format'.format(file_path))
         sys.exit(1)
-
     return mol
 
-def get_ligand_com(ligand_path, debug=False):
+def get_ligand_com(ligand_path, verbose=False):
+
     if os.path.isfile(ligand_path):
         mol = file2rdmol(ligand_path)
         center = list(rdMolTransforms.ComputeCentroid(mol.GetConformer(-1)))
@@ -292,7 +295,7 @@ def get_ligand_com(ligand_path, debug=False):
 
     return center
 
-def set_ligand_pdbqt(ligand_path, center, input_smiles=None, output_pdbqt_path=None, debug=False):
+def set_ligand_pdbqt(ligand_path, center, input_smiles=None, output_pdbqt_path=None, verbose=False):
 
     if os.path.isfile(ligand_path):
         mol = file2rdmol(ligand_path)
@@ -300,18 +303,17 @@ def set_ligand_pdbqt(ligand_path, center, input_smiles=None, output_pdbqt_path=N
         mol = Chem.MolFromSmiles(input_smiles)
         mol = Chem.AddHs(mol)
         AllChem.EmbedMolecule(mol,AllChem.ETKDGv3())
-        mol = Chem.RemoveHs(mol)
     else:
         print('Error: no ligand input file {} or SMILES'.format(ligand_path))
         sys.exit(1)
-    if debug: print(Chem.MolToMolBlock(mol))
+    if verbose: print(Chem.MolToMolBlock(mol))
 
     mol_conf = mol.GetConformer(-1)
     com = list(rdMolTransforms.ComputeCentroid(mol_conf))
 
     #print('PM\n', rdMolTransforms.ComputePrincipalAxesAndMoments(mol_conf))
 
-    if debug: print('com of ligand: ', com, 'reference center: ', center)
+    if verbose: print('com of ligand: ', com, 'reference center: ', center)
     tr = [center[i] - com[i] for i in range(3)]
     rmax = 0.0
     rg = 0.0
@@ -325,15 +327,17 @@ def set_ligand_pdbqt(ligand_path, center, input_smiles=None, output_pdbqt_path=N
             rmax = r
     rg = np.sqrt(rg / mol.GetNumAtoms())
     print('rmax:', rmax, 'rg:', rg)
-    if debug: print(Chem.MolToMolBlock(mol))
+    if verbose: print(Chem.MolToMolBlock(mol))
 
-    preparator = MoleculePreparation(hydrate=True)
+    config = MoleculePreparation.get_defaults_dict()
+    if verbose: print('MoleculePreparation config:', config)
+    preparator = MoleculePreparation.from_config(config)
     preparator.prepare(mol)
     mol_pdbqt = preparator.write_pdbqt_string()
     if isinstance(output_pdbqt_path, str):
         preparator.write_pdbqt_file(output_pdbqt_path)
 
-    if debug:
+    if verbose:
         preparator.show_setup()
         print(mol_pdbqt)
 
@@ -351,28 +355,30 @@ def dockscore_summary(output_ligand_path, output_csv_path):
 
     return scores
 
-def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, outbasename, vina_bin_path,
-                  boxcenter, boxauto=True, boxsize=[22.5, 22.5, 22.5], gybox_ratio=4.0,
+def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, outbasename,
+                  vina_bin_path, boxcenter,
+                  boxauto=True, boxsize=[22.5, 22.5, 22.5], gybox_ratio=4.0,
                   scoring='vina', cpu=0, seed=0, exhaustiveness=8, 
                   max_evals=0, num_modes=9, min_rmsd=1, energy_range=3,
-                  spacing=0.375, verbosity=1, maxtry=100, score_only=False, local_only=False,
-                  debug=False):
-
-    import subprocess
+                  spacing=0.375, verbosity=1, maxtry=100,
+                  score_only=False, local_only=False, verbose=False):
 
     #outbasename = os.path.splitext(os.path.basename(ligand_path))[0]
     input_ligand_path = './{}_vinain.pdbqt'.format(outbasename)
     output_ligand_path = './{}_vinaout.pdbqt'.format(outbasename)
+    sdfout_path = './{}_vinaout.sdf'.format(outbasename)
 
     if ref_ligand_path is not None and os.path.isfile(ref_ligand_path):
         center = get_ligand_com(ref_ligand_path)
     else:
         center = boxcenter
     print('box_center:', center)
-    mol_pdbqt_in, rmax, rg = set_ligand_pdbqt(ligand_path, center,
-                                              output_pdbqt_path=input_ligand_path,
-                                              debug=debug)
-    if debug: print(mol_pdbqt_in)
+    mol_pdbqt_in, rmax, rg = set_ligand_pdbqt(
+        ligand_path, center, output_pdbqt_path=input_ligand_path,
+        verbose=verbose
+    )
+                                              
+    if verbose: print(mol_pdbqt_in)
 
     # Set box size
     if boxauto:
@@ -382,8 +388,7 @@ def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, outbasename, vina
         boxsize_mod = boxsize
         maxtry = 1
 
-    for i in range(maxtry):
-        print('traial', i+1, 'boxauto:', boxauto, 'boxsize:', boxsize_mod)
+    if score_only:
         cmd = [vina_bin_path,
                '--receptor', receptor_path,
                '--ligand', input_ligand_path,
@@ -393,36 +398,54 @@ def vina_dock_bin(receptor_path, ligand_path, ref_ligand_path, outbasename, vina
                '--size_x', str(boxsize_mod[0]),
                '--size_y', str(boxsize_mod[1]),
                '--size_z', str(boxsize_mod[2]),
-               '--out', output_ligand_path,
                '--cpu', str(cpu),
-               '--seed', str(seed),
-               '--exhaustiveness', str(exhaustiveness),
-               '--max_evals', str(max_evals),
-               '--num_modes', str(num_modes),
-               '--min_rmsd', str(min_rmsd),
-               '--energy_range', str(energy_range),
-               '--spacing', str(spacing),
-               '--verbosity', str(verbosity)]
-        if score_only:
-            cmd.append('--score_only')
-        if local_only:
-            cmd.append('--local_only')
-        if debug: print(' '.join(cmd))
+               '--score_only']
+        if verbose: print(' '.join(cmd))
+        results = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        print(results.stdout, results.stderr)
+        scores = [float(l.split()[6]) for l in results.stdout.splitlines() if 'Estimated Free Energy of Binding' in l]
+        output_ligand_path = input_ligand_path
+    else:
+        for i in range(maxtry):
+            print('traial', i+1, 'boxauto:', boxauto, 'boxsize:', boxsize_mod)
+            cmd = [vina_bin_path,
+                   '--receptor', receptor_path,
+                   '--ligand', input_ligand_path,
+                   '--center_x', str(center[0]),
+                   '--center_y', str(center[1]),
+                   '--center_z', str(center[2]),
+                   '--size_x', str(boxsize_mod[0]),
+                   '--size_y', str(boxsize_mod[1]),
+                   '--size_z', str(boxsize_mod[2]),
+                   '--cpu', str(cpu),
+                   '--seed', str(seed),
+                   '--exhaustiveness', str(exhaustiveness),
+                   '--max_evals', str(max_evals),
+                   '--num_modes', str(num_modes),
+                   '--min_rmsd', str(min_rmsd),
+                   '--energy_range', str(energy_range),
+                   '--out', output_ligand_path,
+                   '--spacing', str(spacing),
+                   '--verbosity', str(verbosity)]
+            if local_only:
+                cmd.append('--local_only')
+            if verbose: print(' '.join(cmd))
 
-        try:
-            results = subprocess.run(cmd, capture_output=True, check=True, text=True)
-            print(results.stdout, results.stderr)
-            if results.returncode == 0: break 
-        except subprocess.CalledProcessError:
-            boxsize_mod[0] += 0.5; boxsize_mod[1] += 0.5; boxsize_mod[2] += 0.5
+            try:
+                results = subprocess.run(cmd, capture_output=True, check=True, text=True)
 
-    pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
-    if debug: print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
-    for i, pose in enumerate(pdbqt_out):
-        Chem.MolToMolFile(pose.export_rdkit_mol(), './{}_vinaout_{:02}.mol'.format(outbasename, i))
+                print(results.stdout, results.stderr)
+                if results.returncode == 0: break 
+            except subprocess.CalledProcessError:
+                boxsize_mod[0] += 0.5; boxsize_mod[1] += 0.5; boxsize_mod[2] += 0.5
 
     output_csv_path = './{}_vinascore.csv'.format(outbasename)
     scores = dockscore_summary(output_ligand_path, output_csv_path)
+
+    pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
+    sdfout_string, failures = RDKitMolCreate.write_sd_string(pdbqt_out)
+    with open(sdfout_path, 'w') as f:
+        f.write(sdfout_string)
 
     return scores
 
@@ -431,7 +454,7 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path, outbasename,
                   scoring='vina', cpu=0, seed=0, exhaustiveness=8,
                   max_evals=0, num_modes=9, min_rmsd=1, energy_range=3,
                   spacing=0.375, verbosity=1,
-                  score_only=False, local_only=False, debug=False):
+                  score_only=False, local_only=False, verbose=False):
 
     from vina import Vina
 
@@ -440,8 +463,8 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path, outbasename,
     else:
         center = boxcenter
     print('box_center:', center)
-    mol_pdbqt_in, rmax, rg = set_ligand_pdbqt(ligand_path, center, debug=debug)
-    if debug: print(mol_pdbqt_in)
+    mol_pdbqt_in, rmax, rg = set_ligand_pdbqt(ligand_path, center, verbose=verbose)
+    if verbose: print(mol_pdbqt_in)
 
     # Set box size
     if boxauto:
@@ -452,13 +475,13 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path, outbasename,
     print('boxauto:', boxauto, 'boxsize:', boxsize_mod)
 
     # Set up vina object
-    #verbosity = 1 if debug else 0
+    #verbosity = 1 if verbose else 0
     v = Vina(sf_name=scoring, cpu=cpu, seed=seed, verbosity=verbosity)
     v.set_receptor(rigid_pdbqt_filename=receptor_path)
     v.set_ligand_from_string(mol_pdbqt_in)
     v.compute_vina_maps(center=center, box_size=boxsize_mod)
 
-    if debug: print(v.info())
+    if verbose: print(v.info())
 
     # Score the current pose
     energy = v.score()
@@ -466,6 +489,7 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path, outbasename,
 
     #outbasename = os.path.splitext(os.path.basename(ligand_path))[0]
     output_ligand_path = './{}_vinaout.pdbqt'.format(outbasename)
+    sdfout_path = './{}_vinaout.sdf'.format(outbasename)
 
     if score_only:
         remarks='VINA RESULT:    {:>.3f}      0.000      0.000'.format(energy[0])
@@ -486,13 +510,13 @@ def vina_dock_lib(receptor_path, ligand_path, ref_ligand_path, outbasename,
             v.write_poses(output_ligand_path, n_poses=num_modes, 
                           energy_range=energy_range, overwrite=True)
 
-    pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
-    if debug: print(Chem.MolToMolBlock(pdbqt_out[0].export_rdkit_mol()))
-    for i, pose in enumerate(pdbqt_out):
-        Chem.MolToMolFile(pose.export_rdkit_mol(), './{}_vinaout_{:02}.mol'.format(outbasename, i))
-
     output_csv_path = './{}_vinascore.csv'.format(outbasename)
     scores = dockscore_summary(output_ligand_path, output_csv_path)
+
+    pdbqt_out = PDBQTMolecule.from_file(output_ligand_path, skip_typing=True)
+    sdfout_string, failures = RDKitMolCreate.write_sd_string(pdbqt_out)
+    with open(sdfout_path, 'w') as f:
+        f.write(sdfout_string)
 
     return scores
 
@@ -501,56 +525,60 @@ def vina_dock(receptor_path, ligand_path, ref_ligand_path, outbasename, vina_exe
                   scoring='vina', cpu=0, seed=0, exhaustiveness=8, 
                   max_evals=0, num_modes=9, min_rmsd=1, energy_range=3,
                   spacing=0.375, verbosity=1, maxtry=100,
-                  score_only=False, local_only=False, debug=False):
+                  score_only=False, local_only=False, verbose=False):
 
     if 'bin' in vina_exec.lower():
         print('Using AutoDock Vina binary')
-        scores = vina_dock_bin(receptor_path,
-                               ligand_path,
-                               ref_ligand_path,
-                               outbasename,
-                               vina_bin_path,
-                               boxcenter,
-                               boxauto=boxauto,
-                               boxsize=boxsize,
-                               gybox_ratio=gybox_ratio,
-                               scoring=scoring,
-                               cpu=cpu,
-                               seed=seed,
-                               exhaustiveness=exhaustiveness,
-                               max_evals=max_evals,
-                               num_modes=num_modes,
-                               min_rmsd=min_rmsd,
-                               energy_range=energy_range,
-                               spacing=spacing,
-                               verbosity=verbosity,
-                               maxtry=maxtry,
-                               score_only=score_only,
-                               local_only=local_only,
-                               debug=debug)
+        scores = vina_dock_bin(
+            receptor_path,
+            ligand_path,
+            ref_ligand_path,
+            outbasename,
+            vina_bin_path,
+            boxcenter,
+            boxauto=boxauto,
+            boxsize=boxsize,
+            gybox_ratio=gybox_ratio,
+            scoring=scoring,
+            cpu=cpu,
+            seed=seed,
+            exhaustiveness=exhaustiveness,
+            max_evals=max_evals,
+            num_modes=num_modes,
+            min_rmsd=min_rmsd,
+            energy_range=energy_range,
+            spacing=spacing,
+            verbosity=verbosity,
+            maxtry=maxtry,
+            score_only=score_only,
+            local_only=local_only,
+            verbose=verbose
+        )
     else:
         print('Using AutoDock Vina python API')
-        scores = vina_dock_lib(receptor_path,
-                               ligand_path,
-                               ref_ligand_path,
-                               outbasename,
-                               boxcenter,
-                               boxauto=boxauto,
-                               boxsize=boxsize,
-                               gybox_ratio=gybox_ratio,
-                               scoring=scoring,
-                               cpu=cpu,
-                               seed=seed, 
-                               exhaustiveness=exhaustiveness,
-                               max_evals=max_evals,
-                               num_modes=num_modes,
-                               min_rmsd=min_rmsd,
-                               energy_range=energy_range,
-                               spacing=spacing,
-                               verbosity=verbosity,
-                               score_only=score_only,
-                               local_only=local_only,
-                               debug=debug)
+        scores = vina_dock_lib(
+            receptor_path,
+            ligand_path,
+            ref_ligand_path,
+            outbasename,
+            boxcenter,
+            boxauto=boxauto,
+            boxsize=boxsize,
+            gybox_ratio=gybox_ratio,
+            scoring=scoring,
+            cpu=cpu,
+            seed=seed, 
+            exhaustiveness=exhaustiveness,
+            max_evals=max_evals,
+            num_modes=num_modes,
+            min_rmsd=min_rmsd,
+            energy_range=energy_range,
+            spacing=spacing,
+            verbosity=verbosity,
+            score_only=score_only,
+            local_only=local_only,
+            verbose=verbose
+        )
 
     return scores
 
@@ -581,7 +609,7 @@ def vina_dock_main(conf):
     vina_verbosity = conf['verbosity']
     vina_score_only = conf['score_only']
     vina_local_only = conf['local_only']
-    vina_debug = conf['debug']
+    vina_verbose = conf['verbose']
 
     cwdir = os.getcwd()
     if vina_outdir is not None:
@@ -610,7 +638,7 @@ def vina_dock_main(conf):
                        verbosity=vina_verbosity,
                        score_only=vina_score_only,
                        local_only=vina_local_only,
-                       debug=vina_debug)
+                       verbose=vina_verbose)
 
     os.chdir(cwdir)
 
@@ -618,7 +646,7 @@ def vina_dock_main(conf):
        
 def main():
     args = get_parser()
-    if args.debug: print(args)
+    if args.verbose: print(args)
 
     conf = set_config(args)
 
